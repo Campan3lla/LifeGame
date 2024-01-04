@@ -3,7 +3,7 @@ use std::fmt;
 use std::fmt::Formatter;
 
 pub struct LifeCell {
-    pub alive: bool
+    alive: bool
 } impl LifeCell {
     pub fn gen() -> LifeCell {
         let alive = rand::thread_rng().gen_bool(0.5);
