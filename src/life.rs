@@ -131,12 +131,12 @@ pub struct LifeBoard {
     pub fn width(&self) -> usize { self.width }
     pub fn height(&self) -> usize { self.height }
     pub fn cell_at(&self, x: usize, y: usize) -> &LifeCell { &self.grid[x][y] }
-} impl Display for LifeBoard {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+
+    pub fn grid_fmt(&self, f: &mut Formatter<'_>, alive_cell: &str, dead_cell: &str) -> fmt::Result {
         for row_idx in 0..self.width() {
             for col_idx in 0..self.height() {
                 let cell = self.cell_at(row_idx, col_idx);
-                let alive = if cell.alive { "T" } else { "F" };
+                let alive = if cell.alive { alive_cell } else { dead_cell };
                 let cell_string = format!("{} ", alive);
                 write!(f, "{}", cell_string)?;
             }
@@ -145,9 +145,13 @@ pub struct LifeBoard {
         }
         write!(f, "{}", "")
     }
+} impl Display for LifeBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.grid_fmt(f, "*", " ")
+    }
 } impl Debug for LifeBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Display::fmt(self, f)
+        self.grid_fmt(f, "T", "F")
     }
 } impl PartialEq for LifeBoard {
     fn eq(&self, other: &Self) -> bool {
