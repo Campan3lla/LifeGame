@@ -38,20 +38,24 @@ pub struct LifeBoard {
         for row_idx in 0..self.width {
             let mut new_col = Vec::with_capacity(self.height);
             for col_idx in 0..self.height {
-                let neighbors = self.get_num_alive_neighbors(row_idx, col_idx);
-                let old_cell = &self.grid[row_idx][col_idx];
-                let new_cell = match neighbors {
-                    0|1 if old_cell.alive => LifeCell{alive: false},
-                    2|3 if old_cell.alive => LifeCell{alive: true},
-                    4..=8 if old_cell.alive => LifeCell{alive: false},
-                    3 if !old_cell.alive => LifeCell{alive: true},
-                    _ => LifeCell{alive: false},
-                };
+                let new_cell = self.next_cell_state(row_idx, col_idx);
                 new_col.push(new_cell);
             }
             new_grid.push(new_col);
         }
         self.grid = new_grid;
+    }
+
+    fn next_cell_state(&self, x:usize, y:usize) -> LifeCell {
+        let neighbors = self.get_num_alive_neighbors(x, y);
+        let old_cell = &self.grid[x][y];
+        return match neighbors {
+            0|1 if old_cell.alive => LifeCell{alive: false},
+            2|3 if old_cell.alive => LifeCell{alive: true},
+            4..=8 if old_cell.alive => LifeCell{alive: false},
+            3 if !old_cell.alive => LifeCell{alive: true},
+            _ => LifeCell{alive: false},
+        };
     }
 
     pub fn get_num_alive_neighbors(&self, x: usize, y: usize) -> u8 {
