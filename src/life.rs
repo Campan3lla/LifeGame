@@ -15,6 +15,7 @@ pub struct LifeCell {
     }
 }
 
+#[derive(Debug)]
 pub enum LifeError {
     InvalidBoard(String),
 }
@@ -148,6 +149,26 @@ mod tests {
             "Expected \"{actual}\" to contain \"{expected}\"")
     }
 
+    fn to_grid<A, B>(collection: A) -> Vec<Vec<LifeCell>>
+        where
+            A: IntoIterator<Item=B>,
+            B: IntoIterator<Item=bool>
+    {
+        collection.into_iter().map(|row|
+            row.into_iter().map(|alive| LifeCell{alive }).collect()
+        ).collect()
+    }
+
+    fn get_2x2_board(array: [[bool;2];2]) -> LifeBoard {
+        let board = to_grid(array);
+        LifeBoard::new(board).unwrap()
+    }
+
+    fn get_5x5_board(array: [[bool;5];5]) -> LifeBoard {
+        let board = to_grid(array);
+        LifeBoard::new(board).unwrap()
+    }
+
     #[test]
     fn test_exception_life_board_new_invalid_row() {
         let grid: Vec<Vec<LifeCell>> = Vec::new();
@@ -161,8 +182,7 @@ mod tests {
 
     #[test]
     fn test_exception_life_board_new_invalid_col() {
-        let mut grid: Vec<Vec<LifeCell>> = Vec::new();
-        grid.push(Vec::<LifeCell>::new());
+        let grid: Vec<Vec<LifeCell>> = to_grid([[]]);
         match LifeBoard::new(grid) {
             Ok(_) => panic!("Board should be invalid."),
             Err(LifeError::InvalidBoard(error)) => {
@@ -172,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn test_exception_life_board_inconsistent_col_len() {
+    fn test_exception_life_board_new_inconsistent_col_len() {
         let mut grid: Vec<Vec<LifeCell>> = Vec::new();
         let mut col1 = Vec::<LifeCell>::new();
         let mut col2 = Vec::<LifeCell>::new();
@@ -185,6 +205,17 @@ mod tests {
             Ok(_) => panic!("Board should be invalid."),
             Err(LifeError::InvalidBoard(error)) => {
                 assert_contains(error, "consistent size");
+            }
+        }
+    }
+
+    #[test]
+    fn test_equivalence_life_board_new_valid_2x2_board() {
+        let grid = to_grid([[false, true], [true, true]]);
+        match LifeBoard::new(grid) {
+            Ok(_) => (),
+            Err(error) => {
+                panic!("Board should be invalid. Found {error:#?}");
             }
         }
     }
