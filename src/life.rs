@@ -253,4 +253,13 @@ mod tests {
             panic!("Cell should be invalid")
         }
     }
+
+    #[test]
+    fn test_boundary_get_num_alive_neighbors_1x1_board() {
+        let board = LifeBoard::new(to_grid([[true]])).unwrap();
+        match board.get_num_alive_neighbors(0, 0) {
+            0 => return,
+            _ => panic!("There should be no alive neighbors for a 1x1 board."),
+        }
+    }
 }
