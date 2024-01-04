@@ -1,7 +1,11 @@
+use std::cmp::min;
 use rand::Rng;
 use std::fmt::{self, Debug, Display, Formatter};
+use std::ops::Range;
+use std::sync::mpsc;
+use std::thread;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LifeCell {
     alive: bool
 } impl LifeCell {
@@ -65,7 +69,7 @@ pub struct LifeBoard {
         LifeBoard { grid, width, height }
     }
 
-    pub fn simulate(&mut self) {
+    pub fn simulate(&self) -> LifeBoard {
         let mut new_grid: Vec<Vec<LifeCell>> = Vec::with_capacity(self.width);
         for row_idx in 0..self.width {
             let mut new_col = Vec::with_capacity(self.height);
@@ -75,12 +79,18 @@ pub struct LifeBoard {
             }
             new_grid.push(new_col);
         }
-        self.grid = new_grid;
+        return LifeBoard { grid: new_grid, width: self.width, height: self.height };
     }
 
-    pub fn simulate_n_steps(&mut self, n: u16) {
-        for _ in 0..n {
-            self.simulate();
+    pub fn simulate_n_steps(&self, steps: u16) -> LifeBoard {
+        if steps == 0 {
+            LifeBoard { grid: self.grid.clone(), width: self.width, height: self.height }
+        } else {
+            let mut board = self.simulate();
+            for _ in 1..steps {
+                board = board.simulate();
+            }
+            return board;
         }
     }
 
@@ -334,7 +344,7 @@ mod tests {
             [false, false, true],
             [false, false, false]
         ]);
-        actual_board.simulate();
+        actual_board = actual_board.simulate();
         assert_boards_eq(expected_board, actual_board);
     }
 
@@ -347,7 +357,7 @@ mod tests {
             [false, true, true, false, false],
             [true, false, false, true, false],
         ])).unwrap();
-        actual_board.simulate_n_steps(10);
+        actual_board = actual_board.simulate_n_steps(10);
         let expected_board = LifeBoard::new(to_grid([
             [false, false, false, false, false],
             [false, false, false, false, false],
@@ -369,7 +379,7 @@ mod tests {
             [false, true, true, false, true, false, true],
             [false, true, false, true, true, false, true],
         ])).unwrap();
-        actual_board.simulate_n_steps(10);
+        actual_board = actual_board.simulate_n_steps(10);
         let expected_board = LifeBoard::new(to_grid([
             [false, false, true, false, true, false, false],
             [false, true, false, false, true, false, false],

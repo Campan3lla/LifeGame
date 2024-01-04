@@ -55,8 +55,11 @@ fn main() {
                 *control_flow = ControlFlow::ExitWithCode(0);
                 return;
             } else if input.key_pressed(VirtualKeyCode::Space) {
-                game.simulate();
+                game = game.simulate();
                 window.request_redraw();
+                return;
+            } else if input.key_pressed(VirtualKeyCode::D) {
+                // game.simulate_parallel(5);
                 return;
             }
         }
