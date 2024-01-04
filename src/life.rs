@@ -245,4 +245,12 @@ mod tests {
             panic!("Cell should be invalid")
         }
     }
+
+    #[test]
+    fn test_exception_life_board_is_cell_alive_invalid_x() {
+        let board = LifeBoard::new(to_grid([[true]])).unwrap();
+        if let Some(_) = board.is_cell_alive(-1, 0) {
+            panic!("Cell should be invalid")
+        }
+    }
 }
