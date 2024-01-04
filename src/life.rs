@@ -1,6 +1,6 @@
 use rand::Rng;
 use std::fmt;
-use std::fmt::Formatter;
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub struct LifeCell {
@@ -24,8 +24,6 @@ pub struct LifeCell {
 pub enum LifeError {
     InvalidBoard(String),
 }
-
-
 
 pub struct LifeBoard {
     grid: Vec<Vec<LifeCell>>,
@@ -142,11 +140,22 @@ pub struct LifeBoard {
         }
         write!(f, "{}", "")
     }
+} impl Debug for LifeBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(self, f)
+    }
+} impl PartialEq for LifeBoard {
+    fn eq(&self, other: &Self) -> bool {
+        let mut all_eq = true;
+        for (expected_row, actual_row) in self.grid.iter().zip(other.grid.iter()) {
+            all_eq &= expected_row.eq(actual_row);
+        }
+        all_eq
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs::read;
     use crate::life::{LifeBoard, LifeCell, LifeError};
 
     fn assert_contains(actual: String, expected: &str) {
@@ -282,18 +291,6 @@ mod tests {
         }
     }
 
-    fn assert_grids_eq(expected: Vec<Vec<LifeCell>>, actual: Vec<Vec<LifeCell>>) {
-        for (row_idx, (expected_row, actual_rows)) in expected.iter().zip(actual.iter()).enumerate() {
-            for (col_idx, (expected_cell, actual_cell)) in expected_row.iter().zip(actual_rows).enumerate() {
-                assert_eq!(
-                    expected_cell, actual_cell,
-                    "Expected {:?} to equal {:?} at ({row_idx}, {col_idx})",
-                    expected_cell, actual_cell
-                )
-            }
-        }
-    }
-
     #[test]
     fn test_equivalence_next_cell_state_3x3_board() {
         let board = get_3x3_board([
@@ -310,5 +307,25 @@ mod tests {
         assert!(!board.next_cell_state(2, 0).alive, "Cell should die from underpopulation");
         assert!(!board.next_cell_state(2, 1).alive, "Cell should remain dead");
         assert!(!board.next_cell_state(2, 2).alive, "Cell should remain dead");
+    }
+
+    fn assert_boards_eq(expected: LifeBoard, actual: LifeBoard) {
+        assert_eq!(expected, actual, "\nEXPECTED:\n{expected}\n ACTUAL:\n{actual}\n")
+    }
+
+    #[test]
+    fn test_equivalence_simulate_3x3_board() {
+        let mut actual_board = get_3x3_board([
+            [true, true, true],
+            [false, true, false],
+            [true, false, false]
+        ]);
+        let expected_board = get_3x3_board([
+            [true, true, true],
+            [false, false, true],
+            [false, false, false]
+        ]);
+        actual_board.simulate();
+        assert_boards_eq(expected_board, actual_board);
     }
 }
