@@ -255,7 +255,7 @@ mod tests {
         let board = LifeBoard::new(to_grid([[true]])).unwrap();
         match board.get_num_alive_neighbors(0, 0) {
             0 => return,
-            _ => panic!("There should be no alive neighbors for a 1x1 board."),
+            num => panic!("There should be no alive neighbors but found {num}."),
         }
     }
 
@@ -264,7 +264,16 @@ mod tests {
         let board = get_3x3_board([[false, false, false], [false, false, false], [false, false, false]]);
         match board.get_num_alive_neighbors(1, 1) {
             0 => return,
-            _ => panic!("There should be no alive neighbors."),
+            num => panic!("There should be no alive neighbors but found {num}."),
+        }
+    }
+
+    #[test]
+    fn test_equivalence_get_num_alive_neighbors_3x3_board_all() {
+        let board = get_3x3_board([[true, true, true], [true, false, true], [true, true, true]]);
+        match board.get_num_alive_neighbors(1, 1) {
+            8 => return,
+            num => panic!("Expected 8 neighbors but found {num}"),
         }
     }
 }
