@@ -15,7 +15,7 @@ pub struct LifeCell {
     }
 }
 
-enum LifeError {
+pub enum LifeError {
     InvalidBoard(String),
 }
 
@@ -140,8 +140,22 @@ pub struct LifeBoard {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test_board() {
+    use crate::life::{LifeBoard, LifeCell, LifeError};
 
+    fn assert_contains(actual: String, expected: &str) {
+        assert!(
+            actual.contains(expected),
+            "Expected \"{actual}\" to contain \"{expected}\"")
+    }
+
+    #[test]
+    fn test_exception_life_board_new_invalid_row() {
+        let grid: Vec<Vec<LifeCell>> = Vec::new();
+        match LifeBoard::new(grid) {
+            Ok(_) => panic!("Board should be invalid."),
+            Err(LifeError::InvalidBoard(error)) => {
+                assert_contains(error, "at least one cell wide");
+            }
+        };
     }
 }
