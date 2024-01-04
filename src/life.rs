@@ -2,6 +2,7 @@ use rand::Rng;
 use std::fmt;
 use std::fmt::Formatter;
 
+#[derive(Debug)]
 pub struct LifeCell {
     alive: bool
 } impl LifeCell {
@@ -12,6 +13,10 @@ pub struct LifeCell {
 
     pub fn new(alive: bool) -> LifeCell {
         LifeCell { alive }
+    }
+} impl PartialEq for LifeCell {
+    fn eq(&self, other: &Self) -> bool {
+        self.alive == other.alive
     }
 }
 
@@ -275,5 +280,35 @@ mod tests {
             8 => return,
             num => panic!("Expected 8 neighbors but found {num}"),
         }
+    }
+
+    fn assert_grids_eq(expected: Vec<Vec<LifeCell>>, actual: Vec<Vec<LifeCell>>) {
+        for (row_idx, (expected_row, actual_rows)) in expected.iter().zip(actual.iter()).enumerate() {
+            for (col_idx, (expected_cell, actual_cell)) in expected_row.iter().zip(actual_rows).enumerate() {
+                assert_eq!(
+                    expected_cell, actual_cell,
+                    "Expected {:?} to equal {:?} at ({row_idx}, {col_idx})",
+                    expected_cell, actual_cell
+                )
+            }
+        }
+    }
+
+    #[test]
+    fn test_equivalence_next_cell_state_3x3_board() {
+        let board = get_3x3_board([
+            [true, true, true],
+            [false, true, false],
+            [true, false, false]
+        ]);
+        assert!(board.next_cell_state(0, 0).alive, "Cell should survive");
+        assert!(board.next_cell_state(0, 1).alive, "Cell should survive");
+        assert!(board.next_cell_state(0, 2).alive, "Cell should survive");
+        assert!(!board.next_cell_state(1, 0).alive, "Cell should remain dead");
+        assert!(!board.next_cell_state(1, 1).alive, "Cell should die from overpopulation");
+        assert!(board.next_cell_state(1, 2).alive, "Cell should become alive");
+        assert!(!board.next_cell_state(2, 0).alive, "Cell should die from underpopulation");
+        assert!(!board.next_cell_state(2, 1).alive, "Cell should remain dead");
+        assert!(!board.next_cell_state(2, 2).alive, "Cell should remain dead");
     }
 }
