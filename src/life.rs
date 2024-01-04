@@ -1,6 +1,5 @@
 use rand::Rng;
-use std::fmt;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub struct LifeCell {
@@ -79,6 +78,12 @@ pub struct LifeBoard {
         self.grid = new_grid;
     }
 
+    pub fn simulate_n_steps(&mut self, n: u16) {
+        for _ in 0..n {
+            self.simulate();
+        }
+    }
+
     fn next_cell_state(&self, x:usize, y:usize) -> LifeCell {
         let neighbors = self.get_num_alive_neighbors(x, y);
         let old_cell = &self.grid[x][y];
@@ -126,7 +131,7 @@ pub struct LifeBoard {
     pub fn width(&self) -> usize { self.width }
     pub fn height(&self) -> usize { self.height }
     pub fn cell_at(&self, x: usize, y: usize) -> &LifeCell { &self.grid[x][y] }
-} impl fmt::Display for LifeBoard {
+} impl Display for LifeBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for row_idx in 0..self.width() {
             for col_idx in 0..self.height() {
@@ -326,6 +331,26 @@ mod tests {
             [false, false, false]
         ]);
         actual_board.simulate();
+        assert_boards_eq(expected_board, actual_board);
+    }
+
+    #[test]
+    fn test_equivalence_simulate_5x5_board_10_steps_all_die() {
+        let mut actual_board = LifeBoard::new(to_grid([
+            [true, false, false, true, false],
+            [false, false, true, true, false],
+            [true, true, false, false, true],
+            [false, true, true, false, false],
+            [true, false, false, true, false],
+        ])).unwrap();
+        actual_board.simulate_n_steps(10);
+        let expected_board = LifeBoard::new(to_grid([
+            [false, false, false, false, false],
+            [false, false, false, false, false],
+            [false, false, false, false, false],
+            [false, false, false, false, false],
+            [false, false, false, false, false],
+        ])).unwrap();
         assert_boards_eq(expected_board, actual_board);
     }
 }
