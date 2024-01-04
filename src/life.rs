@@ -141,6 +141,7 @@ pub struct LifeBoard {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::read;
     use crate::life::{LifeBoard, LifeCell, LifeError};
 
     fn assert_contains(actual: String, expected: &str) {
@@ -159,12 +160,7 @@ mod tests {
         ).collect()
     }
 
-    fn get_2x2_board(array: [[bool;2];2]) -> LifeBoard {
-        let board = to_grid(array);
-        LifeBoard::new(board).unwrap()
-    }
-
-    fn get_5x5_board(array: [[bool;5];5]) -> LifeBoard {
+    fn get_3x3_board(array: [[bool;3];3]) -> LifeBoard {
         let board = to_grid(array);
         LifeBoard::new(board).unwrap()
     }
@@ -260,6 +256,15 @@ mod tests {
         match board.get_num_alive_neighbors(0, 0) {
             0 => return,
             _ => panic!("There should be no alive neighbors for a 1x1 board."),
+        }
+    }
+
+    #[test]
+    fn test_equivalence_get_num_alive_neighbors_3x3_board_none() {
+        let board = get_3x3_board([[false, false, false], [false, false, false], [false, false, false]]);
+        match board.get_num_alive_neighbors(1, 1) {
+            0 => return,
+            _ => panic!("There should be no alive neighbors."),
         }
     }
 }
