@@ -158,4 +158,16 @@ mod tests {
             }
         };
     }
+
+    #[test]
+    fn test_exception_life_board_new_invalid_col() {
+        let mut grid: Vec<Vec<LifeCell>> = Vec::new();
+        grid.push(Vec::<LifeCell>::new());
+        match LifeBoard::new(grid) {
+            Ok(_) => panic!("Board should be invalid."),
+            Err(LifeError::InvalidBoard(error)) => {
+                assert_contains(error, "at least one cell tall");
+            }
+        };
+    }
 }
