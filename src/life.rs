@@ -95,16 +95,16 @@ pub struct LifeBoard {
     pub fn cell_at(&self, x: usize, y: usize) -> &LifeCell { &self.grid[x][y] }
 } impl fmt::Display for LifeBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let mut to_string = String::new();
         for row_idx in 0..self.width() {
             for col_idx in 0..self.height() {
                 let cell = self.cell_at(row_idx, col_idx);
                 let alive = if cell.alive { "T" } else { "F" };
-                let cell_string = &format!("({}) ", alive)[..];
-                to_string.push_str(cell_string);
+                let cell_string = format!("{} ", alive);
+                write!(f, "{}", cell_string)?;
             }
-            to_string.push('\n');
+            let newline = if row_idx == self.width-1 { "" } else { "\n" };
+            write!(f, "{}", newline)?;
         }
-        write!(f, "{}", to_string)
+        write!(f, "{}", "")
     }
 }
