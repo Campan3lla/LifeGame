@@ -20,7 +20,7 @@ pub struct LifeGrid {
     width: usize,
     height: usize,
 } impl LifeGrid {
-    pub fn new(width: usize, height: usize) -> LifeGrid {
+    pub fn gen(width: usize, height: usize) -> LifeGrid {
         let mut grid: Vec<Vec<LifeCell>> = Vec::with_capacity(width);
         for _ in 0..width {
             let mut col = Vec::with_capacity(height);
