@@ -105,7 +105,6 @@ pub struct LifeBoard {
             }
             to_string.push('\n');
         }
-        to_string.push_str("-------------------\n");
         write!(f, "{}", to_string)
     }
 }
