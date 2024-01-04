@@ -15,12 +15,12 @@ pub struct LifeCell {
     }
 }
 
-pub struct LifeGrid {
+pub struct LifeBoard {
     grid: Vec<Vec<LifeCell>>,
     width: usize,
     height: usize,
-} impl LifeGrid {
-    pub fn gen(width: usize, height: usize) -> LifeGrid {
+} impl LifeBoard {
+    pub fn gen(width: usize, height: usize) -> LifeBoard {
         let mut grid: Vec<Vec<LifeCell>> = Vec::with_capacity(width);
         for _ in 0..width {
             let mut col = Vec::with_capacity(height);
@@ -30,7 +30,7 @@ pub struct LifeGrid {
             grid.push(col);
         }
 
-        LifeGrid { grid, width, height }
+        LifeBoard { grid, width, height }
     }
 
     pub fn simulate(&mut self) {
@@ -89,7 +89,7 @@ pub struct LifeGrid {
     pub fn width(&self) -> usize { self.width }
     pub fn height(&self) -> usize { self.height }
     pub fn cell_at(&self, x: usize, y: usize) -> &LifeCell { &self.grid[x][y] }
-} impl fmt::Display for LifeGrid {
+} impl fmt::Display for LifeBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut to_string = String::new();
         for row_idx in 0..self.width() {
