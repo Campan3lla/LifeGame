@@ -219,4 +219,13 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_equivalence_life_board_is_cell_alive_false() {
+        let board = LifeBoard::new(to_grid([[false]])).unwrap();
+        match board.is_cell_alive(0, 0) {
+            Some(alive) => assert!(!alive, "The cell should not be alive."),
+            None => panic!("Cell should be valid"),
+        }
+    }
 }
