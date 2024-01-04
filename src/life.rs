@@ -15,11 +15,40 @@ pub struct LifeCell {
     }
 }
 
+enum LifeError {
+    InvalidBoard(String),
+}
+
+
+
 pub struct LifeBoard {
     grid: Vec<Vec<LifeCell>>,
     width: usize,
     height: usize,
 } impl LifeBoard {
+    pub fn new(grid: Vec<Vec<LifeCell>>) -> Result<LifeBoard, LifeError> {
+        let width = match grid.len() {
+            0 => return Err(
+                LifeError::InvalidBoard(String::from("Board must be at least one cell wide."))
+            ),
+            len => len,
+        };
+        let height = match grid[0].len() {
+            0 => return Err(
+                LifeError::InvalidBoard(String::from("Board must be at least one cell tall."))
+            ),
+            len => len,
+        };
+        for col in &grid {
+            if col.len() != height {
+                return Err(
+                    LifeError::InvalidBoard(String::from("Board must have columns of consistent size."))
+                )
+            }
+        }
+        return Ok(LifeBoard { grid, width, height })
+    }
+
     pub fn gen(width: usize, height: usize) -> LifeBoard {
         let mut grid: Vec<Vec<LifeCell>> = Vec::with_capacity(width);
         for _ in 0..width {
