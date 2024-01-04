@@ -353,4 +353,28 @@ mod tests {
         ])).unwrap();
         assert_boards_eq(expected_board, actual_board);
     }
+
+    #[test]
+    fn test_equivalence_simulate_7x7_board_10_steps() {
+        let mut actual_board = LifeBoard::new(to_grid([
+            [true, false, true, false, false, true, false],
+            [false, true, true, false, false, true, true],
+            [false, false, false, true, false, false, true],
+            [true, true, false, false, false, true, false],
+            [false, false, false, false, true, false, false],
+            [false, true, true, false, true, false, true],
+            [false, true, false, true, true, false, true],
+        ])).unwrap();
+        actual_board.simulate_n_steps(10);
+        let expected_board = LifeBoard::new(to_grid([
+            [false, false, true, false, true, false, false],
+            [false, true, false, false, true, false, false],
+            [false, true, true, false, true, false, false],
+            [false, true, true, true, false, false, false],
+            [false, true, false, true, true, true, false],
+            [false, true, true, false, true, false, false],
+            [false, false, true, false, false, false, false],
+        ])).unwrap();
+        assert_boards_eq(expected_board, actual_board);
+    }
 }
