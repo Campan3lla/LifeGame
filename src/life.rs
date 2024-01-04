@@ -170,4 +170,22 @@ mod tests {
             }
         };
     }
+
+    #[test]
+    fn test_exception_life_board_inconsistent_col_len() {
+        let mut grid: Vec<Vec<LifeCell>> = Vec::new();
+        let mut col1 = Vec::<LifeCell>::new();
+        let mut col2 = Vec::<LifeCell>::new();
+        col1.push(LifeCell::gen());
+        col1.push(LifeCell::gen());
+        col2.push(LifeCell::gen());
+        grid.push(col1);
+        grid.push(col2);
+        match LifeBoard::new(grid) {
+            Ok(_) => panic!("Board should be invalid."),
+            Err(LifeError::InvalidBoard(error)) => {
+                assert_contains(error, "consistent size");
+            }
+        }
+    }
 }
