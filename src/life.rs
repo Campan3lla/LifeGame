@@ -9,6 +9,10 @@ pub struct LifeCell {
         let alive = rand::thread_rng().gen_bool(0.5);
         LifeCell { alive }
     }
+
+    pub fn new(alive: bool) -> LifeCell {
+        LifeCell { alive }
+    }
 }
 
 pub struct LifeGrid {
