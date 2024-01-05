@@ -3,53 +3,31 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::ops::Range;
 use std::sync::{Arc, mpsc};
 use std::thread;
-
-#[derive(Debug, Clone)]
-pub struct LifeCell {
-    alive: bool
-} impl LifeCell {
-    pub fn gen() -> LifeCell {
-        let alive = rand::thread_rng().gen_bool(0.5);
-        LifeCell { alive }
-    }
-
-    pub fn new(alive: bool) -> LifeCell {
-        LifeCell { alive }
-    }
-} impl PartialEq for LifeCell {
-    fn eq(&self, other: &Self) -> bool {
-        self.alive == other.alive
-    }
-}
-
-#[derive(Debug)]
-pub enum LifeError {
-    InvalidBoard(String),
-}
+use crate::life_interface::LifeBoardError;
 
 #[derive(Clone)]
 pub struct LifeBoard {
-    grid: Vec<Vec<LifeCell>>,
+    grid: Vec<Vec<Cell>>,
     width: usize,
     height: usize,
 } impl LifeBoard {
-    pub fn new(grid: Vec<Vec<LifeCell>>) -> Result<LifeBoard, LifeError> {
+    pub fn new(grid: Vec<Vec<Cell>>) -> Result<LifeBoard, LifeBoardError> {
         let width = match grid.len() {
             0 => return Err(
-                LifeError::InvalidBoard(String::from("Board must be at least one cell wide."))
+                LifeBoardError::InvalidBoard(String::from("Board must be at least one cell wide."))
             ),
             len => len,
         };
         let height = match grid[0].len() {
             0 => return Err(
-                LifeError::InvalidBoard(String::from("Board must be at least one cell tall."))
+                LifeBoardError::InvalidBoard(String::from("Board must be at least one cell tall."))
             ),
             len => len,
         };
         for col in &grid {
             if col.len() != height {
                 return Err(
-                    LifeError::InvalidBoard(String::from("Board must have columns of consistent size."))
+                    LifeBoardError::InvalidBoard(String::from("Board must have columns of consistent size."))
                 )
             }
         }
@@ -57,11 +35,11 @@ pub struct LifeBoard {
     }
 
     pub fn gen(width: usize, height: usize) -> LifeBoard {
-        let mut grid: Vec<Vec<LifeCell>> = Vec::with_capacity(width);
+        let mut grid: Vec<Vec<Cell>> = Vec::with_capacity(width);
         for _ in 0..width {
             let mut col = Vec::with_capacity(height);
             for _ in 0..height {
-                col.push(LifeCell::gen());
+                col.push(Cell::gen());
             }
             grid.push(col);
         }
@@ -70,7 +48,7 @@ pub struct LifeBoard {
     }
 
     pub fn simulate(&self) -> LifeBoard {
-        let mut new_grid: Vec<Vec<LifeCell>> = Vec::with_capacity(self.width);
+        let mut new_grid: Vec<Vec<Cell>> = Vec::with_capacity(self.width);
         for row_idx in 0..self.width {
             let mut new_col = Vec::with_capacity(self.height);
             for col_idx in 0..self.height {
@@ -94,15 +72,15 @@ pub struct LifeBoard {
         }
     }
 
-    fn next_cell_state(&self, x:usize, y:usize) -> LifeCell {
+    fn next_cell_state(&self, x:usize, y:usize) -> Cell {
         let neighbors = self.get_num_alive_neighbors(x, y);
         let old_cell = &self.grid[x][y];
         return match neighbors {
-            0|1 if old_cell.alive => LifeCell{alive: false},
-            2|3 if old_cell.alive => LifeCell{alive: true},
-            4..=8 if old_cell.alive => LifeCell{alive: false},
-            3 if !old_cell.alive => LifeCell{alive: true},
-            _ => LifeCell{alive: false},
+            0|1 if old_cell.alive => Cell {alive: false},
+            2|3 if old_cell.alive => Cell {alive: true},
+            4..=8 if old_cell.alive => Cell {alive: false},
+            3 if !old_cell.alive => Cell {alive: true},
+            _ => Cell {alive: false},
         };
     }
 
@@ -140,7 +118,7 @@ pub struct LifeBoard {
 
     pub fn width(&self) -> usize { self.width }
     pub fn height(&self) -> usize { self.height }
-    pub fn cell_at(&self, x: usize, y: usize) -> &LifeCell { &self.grid[x][y] }
+    pub fn cell_at(&self, x: usize, y: usize) -> &Cell { &self.grid[x][y] }
 
     pub fn grid_fmt(&self, f: &mut Formatter<'_>, alive_cell: &str, dead_cell: &str, dbg: bool) -> fmt::Result {
         for col_idx in 0..self.height() {
@@ -197,14 +175,14 @@ pub struct ParallelLifeBoard {
             nthreads: (nthreads as usize),
         }
     }
-    pub fn from_grid<A, B>(collection: A, nthreads: u8) -> Result<ParallelLifeBoard, LifeError>
+    pub fn from_grid<A, B>(collection: A, nthreads: u8) -> Result<ParallelLifeBoard, LifeBoardError>
         where
             A: IntoIterator<Item=B>,
             B: IntoIterator<Item=bool>
     {
         let grid = collection.into_iter().map(|row| {
             row.into_iter().map(|alive| {
-                LifeCell { alive }
+                Cell { alive }
             }).collect()
         }).collect();
         let board = LifeBoard::new(grid)?;
@@ -229,14 +207,14 @@ pub struct ParallelLifeBoard {
     }
 
     pub fn simulate(&mut self) {
-        let (tx, rx) = mpsc::channel::<(Vec<Vec<LifeCell>>, usize)>();
+        let (tx, rx) = mpsc::channel::<(Vec<Vec<Cell>>, usize)>();
         let mut thread_handles = Vec::with_capacity(self.nthreads);
         for thread_idx in 0..self.nthreads {
             let row_range = self.thread_row_ranges[thread_idx].clone();
             let board = self.board.clone();
             let tx = tx.clone();
             let thread_handle = thread::spawn(move || {
-                let mut board_slice: Vec<Vec<LifeCell>> = Vec::with_capacity(row_range.end);
+                let mut board_slice: Vec<Vec<Cell>> = Vec::with_capacity(row_range.end);
                 for row_idx in row_range {
                     let mut col = Vec::with_capacity(board.height);
                     for col_idx in 0..board.height {
@@ -248,7 +226,7 @@ pub struct ParallelLifeBoard {
             });
             thread_handles.push(thread_handle);
         }
-        let mut new_gird: Vec<Vec<LifeCell>> = (0..self.board.width).map(|_| Vec::new()).collect();
+        let mut new_gird: Vec<Vec<Cell>> = (0..self.board.width).map(|_| Vec::new()).collect();
         for handle in thread_handles {
             let _ = handle.join().expect("Threads should join correctly.");
         }
@@ -292,7 +270,8 @@ pub struct ParallelLifeBoard {
 
 #[cfg(test)]
 mod tests {
-    use crate::life::{LifeBoard, LifeCell, LifeError, ParallelLifeBoard};
+    use crate::life::{Cell, LifeBoard, ParallelLifeBoard};
+    use crate::life_interface::LifeBoardError;
 
     fn assert_contains(actual: String, expected: &str) {
         assert!(
@@ -300,13 +279,13 @@ mod tests {
             "Expected \"{actual}\" to contain \"{expected}\"")
     }
 
-    fn to_grid<A, B>(collection: A) -> Vec<Vec<LifeCell>>
+    fn to_grid<A, B>(collection: A) -> Vec<Vec<Cell>>
         where
             A: IntoIterator<Item=B>,
             B: IntoIterator<Item=bool>
     {
         collection.into_iter().map(|row|
-            row.into_iter().map(|alive| LifeCell{alive }).collect()
+            row.into_iter().map(|alive| Cell {alive }).collect()
         ).collect()
     }
 
@@ -317,10 +296,10 @@ mod tests {
 
     #[test]
     fn test_exception_life_board_new_invalid_row() {
-        let grid: Vec<Vec<LifeCell>> = Vec::new();
+        let grid: Vec<Vec<Cell>> = Vec::new();
         match LifeBoard::new(grid) {
             Ok(_) => panic!("Board should be invalid."),
-            Err(LifeError::InvalidBoard(error)) => {
+            Err(LifeBoardError::InvalidBoard(error)) => {
                 assert_contains(error, "at least one cell wide");
             }
         };
@@ -328,10 +307,10 @@ mod tests {
 
     #[test]
     fn test_exception_life_board_new_invalid_col() {
-        let grid: Vec<Vec<LifeCell>> = to_grid([[]]);
+        let grid: Vec<Vec<Cell>> = to_grid([[]]);
         match LifeBoard::new(grid) {
             Ok(_) => panic!("Board should be invalid."),
-            Err(LifeError::InvalidBoard(error)) => {
+            Err(LifeBoardError::InvalidBoard(error)) => {
                 assert_contains(error, "at least one cell tall");
             }
         };
@@ -339,17 +318,17 @@ mod tests {
 
     #[test]
     fn test_exception_life_board_new_inconsistent_col_len() {
-        let mut grid: Vec<Vec<LifeCell>> = Vec::new();
-        let mut col1 = Vec::<LifeCell>::new();
-        let mut col2 = Vec::<LifeCell>::new();
-        col1.push(LifeCell::gen());
-        col1.push(LifeCell::gen());
-        col2.push(LifeCell::gen());
+        let mut grid: Vec<Vec<Cell>> = Vec::new();
+        let mut col1 = Vec::<Cell>::new();
+        let mut col2 = Vec::<Cell>::new();
+        col1.push(Cell::gen());
+        col1.push(Cell::gen());
+        col2.push(Cell::gen());
         grid.push(col1);
         grid.push(col2);
         match LifeBoard::new(grid) {
             Ok(_) => panic!("Board should be invalid."),
-            Err(LifeError::InvalidBoard(error)) => {
+            Err(LifeBoardError::InvalidBoard(error)) => {
                 assert_contains(error, "consistent size");
             }
         }
@@ -564,5 +543,21 @@ mod tests {
         actual_board.simulate_n_steps(10);
         let expected_board = get_7x7_end_board_10th_gen();
         let expected_board = ParallelLifeBoard::from(expected_board, 9);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Cell {
+    pub alive: bool
+}
+
+impl Cell {
+    pub fn gen() -> Cell {
+        let alive = rand::thread_rng().gen_bool(0.5);
+        Cell { alive }
+    }
+
+    pub fn new(alive: bool) -> Cell {
+        Cell { alive }
     }
 }

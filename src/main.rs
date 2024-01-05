@@ -1,4 +1,5 @@
 mod life;
+mod life_interface;
 
 use std::time::{Duration, Instant};
 use pixels::{Pixels, SurfaceTexture};
