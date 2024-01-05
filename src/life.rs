@@ -494,54 +494,76 @@ mod tests {
         assert_boards_eq(expected_board, actual_board);
     }
 
-    fn get_7x7_start_board() -> LifeBoard {
+    fn get_7x7_start_board_0th_gen() -> LifeBoard {
         LifeBoard::new(to_grid([
-            [true, false, true, false, false, true, false],
-            [false, true, true, false, false, true, true],
-            [false, false, false, true, false, false, true],
-            [true, true, false, false, false, true, false],
-            [false, false, false, false, true, false, false],
-            [false, true, true, false, true, false, true],
-            [false, true, false, true, true, false, true],
+            [false, true, false, true, false, false, false],
+            [false, true, false, false, true, false, false],
+            [false, false, false, false, false, true, false],
+            [false, false, false, false, false, true, false],
+            [true, false, false, false, true, true, false],
+            [true, false, true, false, false, false, false],
+            [false, false, true, true, true, false, true],
         ])).unwrap()
     }
 
-    fn get_7x7_end_board() -> LifeBoard {
+    fn get_7x7_board_1st_gen() -> LifeBoard {
         LifeBoard::new(to_grid([
-            [false, false, true, false, true, false, false],
-            [false, true, false, false, true, false, false],
-            [false, true, true, false, true, false, false],
-            [false, true, true, true, false, false, false],
-            [false, true, false, true, true, true, false],
-            [false, true, true, false, true, false, false],
             [false, false, true, false, false, false, false],
+            [false, false, true, false, true, false, false],
+            [false, false, false, false, true, true, false],
+            [false, false, false, false, false, true, true],
+            [false, true, false, false, true, true, false],
+            [false, false, true, false, false, false, false],
+            [false, true, true, true, false, false, false],
+        ])).unwrap()
+    }
+
+    fn get_7x7_end_board_10th_gen() -> LifeBoard {
+        LifeBoard::new(to_grid([
+            [false, false, true, true, false, false, false],
+            [false, false, true, true, false, false, false],
+            [false, false, true, false, false, false, false],
+            [false, false, true, false, false, false, false],
+            [false, false, true, false, false, true, true],
+            [false, false, false, false, true, false, true],
+            [false, false, false, false, false, true, false],
         ])).unwrap()
     }
 
     #[test]
     fn test_equivalence_simulate_7x7_board_10_steps() {
-        let mut actual_board = get_7x7_start_board();
+        let mut actual_board = get_7x7_start_board_0th_gen();
         actual_board = actual_board.simulate_n_steps(10);
-        let expected_board = get_7x7_end_board();
+        let expected_board = get_7x7_end_board_10th_gen();
         assert_boards_eq(expected_board, actual_board);
     }
 
     #[test]
     fn test_equivalence_parallel_3_threads_simulate_7x7_board_10_steps() {
-        let actual_board = get_7x7_start_board();
+        let actual_board = get_7x7_start_board_0th_gen();
         let mut actual_board = ParallelLifeBoard::from(actual_board, 3);
         actual_board.simulate_n_steps(10);
-        let expected_board = get_7x7_end_board();
+        let expected_board = get_7x7_end_board_10th_gen();
+        let expected_board = ParallelLifeBoard::from(expected_board, 3);
+        assert_eq!(expected_board, actual_board);
+    }
+
+    #[test]
+    fn test_equivalence_parallel_3_threads_simulate_7x7_board_1_steps() {
+        let actual_board = get_7x7_start_board_0th_gen();
+        let mut actual_board = ParallelLifeBoard::from(actual_board, 3);
+        actual_board.simulate();
+        let expected_board = get_7x7_board_1st_gen();
         let expected_board = ParallelLifeBoard::from(expected_board, 3);
         assert_eq!(expected_board, actual_board);
     }
 
     #[test]
     fn test_equivalence_parallel_9_threads_simulate_7x7_board_10_steps() {
-        let actual_board = get_7x7_start_board();
+        let actual_board = get_7x7_start_board_0th_gen();
         let mut actual_board = ParallelLifeBoard::from(actual_board, 9);
         actual_board.simulate_n_steps(10);
-        let expected_board = get_7x7_end_board();
+        let expected_board = get_7x7_end_board_10th_gen();
         let expected_board = ParallelLifeBoard::from(expected_board, 9);
         assert_eq!(expected_board, actual_board);
         println!("{expected_board:?}\n");
