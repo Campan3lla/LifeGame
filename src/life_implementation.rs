@@ -9,30 +9,41 @@ use crate::life_interface::{LifeBoard, LifeBoardError, LifeCell};
 pub struct Cell { alive: bool } impl Cell {
     pub fn gen() -> Cell { Cell { alive: rand::thread_rng().gen_bool(0.5) } }
 
-    pub fn new(alive: bool) -> Cell { Cell { alive } }
-} impl LifeCell for Cell {
+    pub fn from_bool(alive: bool) -> Cell { Cell { alive } }
+
+} impl LifeCell<Cell> for Cell {
     fn is_alive(&self) -> bool { self.alive }
+    fn to_alive(&self) -> Cell {
+        Cell { alive: true }
+    }
+    fn to_dead(&self) -> Cell {
+        Cell { alive: false }
+    }
 }
 
 #[derive(PartialEq, Clone)]
-pub struct BaseLifeBoard { grid: Vec<Vec<Cell>>, width: usize, height: usize, } impl BaseLifeBoard {
-    fn from_bool_matrix<A, B>(collection: A) -> Result<BaseLifeBoard, LifeBoardError>
+pub struct BaseLifeBoard<T: LifeCell<T>> {
+    grid: Vec<Vec<T>>,
+    width: usize,
+    height: usize,
+} impl <T: LifeCell<T>> BaseLifeBoard<T> {
+    fn from_bool_matrix<A, B>(collection: A, init: fn(state: bool) -> T) -> Result<BaseLifeBoard<T>, LifeBoardError>
         where
             A: IntoIterator<Item=B>,
             B: IntoIterator<Item=bool>
     {
         let grid = collection.into_iter().map(|row|
             row.into_iter().map(|alive|
-                Cell { alive }
+                init(alive)
             ).collect()
         ).collect();
         return BaseLifeBoard::_from_grid(grid);
     }
 
-    fn from_cell_matrix<A, B>(collection: A) -> Result<BaseLifeBoard, LifeBoardError>
+    fn from_cell_matrix<A, B>(collection: A) -> Result<BaseLifeBoard<T>, LifeBoardError>
         where
             A: IntoIterator<Item=B>,
-            B: IntoIterator<Item=Cell>
+            B: IntoIterator<Item=T>
     {
         let grid = collection.into_iter().map(|row|
             row.into_iter().collect()
@@ -40,7 +51,7 @@ pub struct BaseLifeBoard { grid: Vec<Vec<Cell>>, width: usize, height: usize, } 
         return BaseLifeBoard::_from_grid(grid);
     }
 
-    fn _from_grid(grid: Vec<Vec<Cell>>) -> Result<BaseLifeBoard, LifeBoardError> {
+    fn _from_grid(grid: Vec<Vec<T>>) -> Result<BaseLifeBoard<T>, LifeBoardError> {
         let width = match grid.len() {
             0 => return Err(
                 LifeBoardError::InvalidBoard(String::from("Board must be at least one cell wide."))
@@ -63,12 +74,12 @@ pub struct BaseLifeBoard { grid: Vec<Vec<Cell>>, width: usize, height: usize, } 
         return Ok(BaseLifeBoard { grid, width, height })
     }
 
-    pub fn gen(width: usize, height: usize) -> BaseLifeBoard {
-        let mut grid: Vec<Vec<Cell>> = Vec::with_capacity(width);
+    pub fn gen(width: usize, height: usize, gen: fn() -> T) -> BaseLifeBoard<T> {
+        let mut grid: Vec<Vec<T>> = Vec::with_capacity(width);
         for _ in 0..width {
             let mut col = Vec::with_capacity(height);
             for _ in 0..height {
-                col.push(Cell::gen());
+                col.push(gen());
             }
             grid.push(col);
         }
@@ -77,10 +88,10 @@ pub struct BaseLifeBoard { grid: Vec<Vec<Cell>>, width: usize, height: usize, } 
     }
 
     fn _is_cell_alive(&self, x: i64, y: i64) -> Option<bool> {
-        self._cell_at(x, y).map(|cell| cell.alive)
+        self._cell_at(x, y).map(|cell| cell.is_alive())
     }
 
-    fn _cell_at(&self, x: i64, y: i64) -> Option<Cell> {
+    fn _cell_at(&self, x: i64, y: i64) -> Option<T> {
         let (x, y) = match (x, y) {
             (x, _) if x < 0 => return None,
             (_, y) if y < 0 => return None,
@@ -95,13 +106,13 @@ pub struct BaseLifeBoard { grid: Vec<Vec<Cell>>, width: usize, height: usize, } 
         }
     }
 
-    fn into_vec_matrix(self) -> Vec<Vec<Cell>> { self.grid }
+    fn into_vec_matrix(self) -> Vec<Vec<T>> { self.grid }
 
     fn _board_fmt(&self, f: &mut Formatter<'_>, alive_cell: &str, dead_cell: &str, dbg: bool) -> fmt::Result {
         for col_idx in 0..self.height() {
             for row_idx in 0..self.width() {
                 let cell = self.cell_at(row_idx, col_idx).expect("Should always be valid indices");
-                let alive = if cell.alive { alive_cell } else { dead_cell };
+                let alive = if cell.is_alive() { alive_cell } else { dead_cell };
                 let cell_string = if dbg {
                     format!("({alive}, {row_idx}, {col_idx}) ")
                 } else {
@@ -114,12 +125,12 @@ pub struct BaseLifeBoard { grid: Vec<Vec<Cell>>, width: usize, height: usize, } 
         }
         write!(f, "{}", "")
     }
-} impl LifeBoard<Cell> for BaseLifeBoard {
+} impl <T: LifeCell<T>> LifeBoard<T> for BaseLifeBoard<T> {
     fn width(&self) -> usize { self.width }
     fn height(&self) -> usize { self.height }
 
     fn simulate(&mut self) {
-        let mut new_grid: Vec<Vec<Cell>> = Vec::with_capacity(self.width);
+        let mut new_grid: Vec<Vec<T>> = Vec::with_capacity(self.width);
         for row_idx in 0..self.width {
             let mut new_col = Vec::with_capacity(self.height);
             for col_idx in 0..self.height {
@@ -138,22 +149,22 @@ pub struct BaseLifeBoard { grid: Vec<Vec<Cell>>, width: usize, height: usize, } 
         }
     }
 
-    fn next_cell_state_at(&self, x: usize, y: usize) -> Option<Cell> {
+    fn next_cell_state_at(&self, x: usize, y: usize) -> Option<T> {
         let old_cell = match self.cell_at(x, y) {
             Some(cell) => cell,
             None => return None,
         };
-        let alive = match self.num_alive_neighbors_at(x, y) {
-            0|1 if old_cell.alive => false,
-            2|3 if old_cell.alive => true,
-            4..=8 if old_cell.alive => false,
-            3 if !old_cell.alive => true,
-            _ => false,
+        let new_cell = match self.num_alive_neighbors_at(x, y) {
+            0|1 if old_cell.is_alive() => old_cell.to_dead(),
+            2|3 if old_cell.is_alive() => old_cell.to_alive(),
+            4..=8 if old_cell.is_alive() => old_cell.to_dead(),
+            3 if !old_cell.is_alive() => old_cell.to_alive(),
+            _ => old_cell.to_dead(),
         };
-        Some(Cell { alive })
+        Some(new_cell)
     }
 
-    fn cell_at(&self, x: usize, y: usize) -> Option<Cell> { self._cell_at(x as i64, y as i64) }
+    fn cell_at(&self, x: usize, y: usize) -> Option<T> { self._cell_at(x as i64, y as i64) }
 
     fn num_alive_neighbors_at(&self, x: usize, y: usize) -> u8 {
         let mut neighbors = 0u8;
@@ -174,23 +185,23 @@ pub struct BaseLifeBoard { grid: Vec<Vec<Cell>>, width: usize, height: usize, } 
 
     fn is_cell_alive(&self, x: usize, y: usize) -> Option<bool> { self._is_cell_alive(x as i64, y as i64) }
 
-    fn to_vec_matrix(&self) -> Vec<Vec<Cell>> { self.grid.clone() }
-} impl Display for BaseLifeBoard {
+    fn to_vec_matrix(&self) -> Vec<Vec<T>> { self.grid.clone() }
+} impl <T: LifeCell<T>> Display for BaseLifeBoard<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self._board_fmt(f, "*", " ", false)
     }
-} impl Debug for BaseLifeBoard {
+} impl <T: LifeCell<T>> Debug for BaseLifeBoard<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self._board_fmt(f, "T", "F", true)
     }
 }
 
 #[derive(PartialEq, Clone)]
-pub struct ParallelLifeBoard {
-    board: Arc<BaseLifeBoard>,
+pub struct ParallelLifeBoard<T: LifeCell<T> + Sync + Send> {
+    board: Arc<BaseLifeBoard<T>>,
     n_threads: usize,
     thread_row_ranges: Vec<Range<usize>>,
-} impl ParallelLifeBoard {
+} impl <T: LifeCell<T> + Sync + Send> ParallelLifeBoard<T> {
     fn row_ranges(width: usize, nthreads: usize) -> Vec<Range<usize>> {
         let slice_size = width / nthreads;
         let mut cur_left_col = 0;
@@ -205,70 +216,70 @@ pub struct ParallelLifeBoard {
         }).collect()
     }
 
-    pub fn from_matrix<A, B>(collection: A, n_threads: u8) -> Result<ParallelLifeBoard, LifeBoardError>
+    pub fn from_matrix<A, B>(collection: A, n_threads: u8, gen: fn(bool)->T) -> Result<ParallelLifeBoard<T>, LifeBoardError>
         where
             A: IntoIterator<Item=B>,
             B: IntoIterator<Item=bool>
     {
-        let board = BaseLifeBoard::from_bool_matrix(collection);
+        let board = BaseLifeBoard::from_bool_matrix(collection, gen);
         board.map(|board|
             ParallelLifeBoard {
-                thread_row_ranges: ParallelLifeBoard::row_ranges(board.width, n_threads as usize),
+                thread_row_ranges: ParallelLifeBoard::<T>::row_ranges(board.width, n_threads as usize),
                 n_threads: n_threads as usize,
                 board: Arc::new(board),
             }
         )
     }
 
-    pub fn from_board(board: BaseLifeBoard, n_threads: u8) -> ParallelLifeBoard {
+    pub fn from_board(board: BaseLifeBoard<T>, n_threads: u8) -> ParallelLifeBoard<T> {
         ParallelLifeBoard {
-            thread_row_ranges: ParallelLifeBoard::row_ranges(board.width, n_threads as usize),
+            thread_row_ranges: ParallelLifeBoard::<T>::row_ranges(board.width, n_threads as usize),
             n_threads: n_threads as usize,
             board: Arc::new(board),
         }
     }
 
-    fn _from_grid(grid: Vec<Vec<Cell>>, n_threads: u8) -> Result<ParallelLifeBoard, LifeBoardError> {
+    fn _from_grid(grid: Vec<Vec<T>>, n_threads: u8) -> Result<ParallelLifeBoard<T>, LifeBoardError> {
         let board = BaseLifeBoard::_from_grid(grid);
         board.map(|board|
             ParallelLifeBoard {
-                thread_row_ranges: ParallelLifeBoard::row_ranges(board.width, n_threads as usize),
+                thread_row_ranges: ParallelLifeBoard::<T>::row_ranges(board.width, n_threads as usize),
                 n_threads: n_threads as usize,
                 board: Arc::new(board),
             }
         )
     }
 
-    pub fn gen(width: usize, height: usize, n_threads: u8) -> ParallelLifeBoard {
-        let board = BaseLifeBoard::gen(width, height);
+    pub fn gen(width: usize, height: usize, n_threads: u8, gen: fn() ->T) -> ParallelLifeBoard<T> {
+        let board = BaseLifeBoard::gen(width, height, gen);
         ParallelLifeBoard {
-            thread_row_ranges: ParallelLifeBoard::row_ranges(width, n_threads as usize),
+            thread_row_ranges: ParallelLifeBoard::<T>::row_ranges(width, n_threads as usize),
             n_threads: n_threads as usize,
             board: Arc::new(board),
         }
     }
 
     fn _is_cell_alive(&self, x: i64, y: i64) -> Option<bool> {
-        self.board._cell_at(x, y).map(|cell| cell.alive)
+        self.board._cell_at(x, y).map(|cell| cell.is_alive())
     }
 
-    fn _cell_at(&self, x: i64, y: i64) -> Option<Cell> {
+    fn _cell_at(&self, x: i64, y: i64) -> Option<T> {
         self.board._cell_at(x, y)
     }
-} impl LifeBoard<Cell> for ParallelLifeBoard {
+} impl <T: LifeCell<T> + Sync + Send + 'static> LifeBoard<T> for ParallelLifeBoard<T> {
     fn width(&self) -> usize { self.board.width }
 
     fn height(&self) -> usize { self.board.height }
 
     fn simulate(&mut self) {
-        let (tx, rx) = mpsc::channel::<(Vec<Vec<Cell>>, usize)>();
+        let (tx, rx) = mpsc::channel::<(Vec<Vec<T>>, usize)>();
         let mut thread_handles = Vec::with_capacity(self.n_threads);
         for thread_idx in 0..self.n_threads {
             let row_range = self.thread_row_ranges[thread_idx].clone();
             let board = self.board.clone();
             let tx = tx.clone();
             let thread_handle = thread::spawn(move || {
-                let mut board_slice: Vec<Vec<Cell>> = Vec::with_capacity(row_range.end);
+                let mut board_slice: Vec<Vec<T>> = Vec::with_capacity(row_range.end);
                 for row_idx in row_range {
                     let mut col = Vec::with_capacity(board.height);
                     for col_idx in 0..board.height {
@@ -283,7 +294,7 @@ pub struct ParallelLifeBoard {
             });
             thread_handles.push(thread_handle);
         }
-        let mut new_gird: Vec<Vec<Cell>> = (0..self.board.width).map(|_| Vec::new()).collect();
+        let mut new_gird: Vec<Vec<T>> = (0..self.board.width).map(|_| Vec::new()).collect();
         for handle in thread_handles {
             let _ = handle.join().expect("Threads should join correctly.");
         }
@@ -308,20 +319,20 @@ pub struct ParallelLifeBoard {
         }
     }
 
-    fn next_cell_state_at(&self, x: usize, y: usize) -> Option<Cell> { self.board.next_cell_state_at(x, y) }
+    fn next_cell_state_at(&self, x: usize, y: usize) -> Option<T> { self.board.next_cell_state_at(x, y) }
 
-    fn cell_at(&self, x: usize, y: usize) -> Option<Cell> { self.board.cell_at(x, y) }
+    fn cell_at(&self, x: usize, y: usize) -> Option<T> { self.board.cell_at(x, y) }
 
     fn num_alive_neighbors_at(&self, x: usize, y: usize) -> u8 { self.board.num_alive_neighbors_at(x, y) }
 
     fn is_cell_alive(&self, x: usize, y: usize) -> Option<bool> { self.board.is_cell_alive(x, y) }
 
-    fn to_vec_matrix(&self) -> Vec<Vec<Cell>> { self.board.grid.clone() }
-} impl Debug for ParallelLifeBoard {
+    fn to_vec_matrix(&self) -> Vec<Vec<T>> { self.board.grid.clone() }
+} impl <T: LifeCell<T> + Sync + Send> Debug for ParallelLifeBoard<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.board, f)
     }
-} impl Display for ParallelLifeBoard {
+} impl <T: LifeCell<T> + Sync + Send> Display for ParallelLifeBoard<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(&self.board, f)
     }
@@ -338,8 +349,8 @@ mod tests {
             "Expected \"{actual}\" to contain \"{expected}\"")
     }
 
-    fn get_3x3_board(array: [[bool;3];3]) -> BaseLifeBoard {
-        BaseLifeBoard::from_bool_matrix(array).unwrap()
+    fn get_3x3_board(array: [[bool;3];3]) -> BaseLifeBoard<Cell> {
+        BaseLifeBoard::from_bool_matrix(array, Cell::from_bool).unwrap()
     }
 
     #[test]
@@ -356,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_exception_life_board_from_matrix_invalid_col() {
-        match BaseLifeBoard::from_bool_matrix([[]]) {
+        match BaseLifeBoard::from_bool_matrix([[]], Cell::from_bool) {
             Ok(_) => panic!("Board should be invalid."),
             Err(LifeBoardError::InvalidBoard(error)) => {
                 assert_contains(error, "at least one cell tall");
@@ -386,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_equivalence_life_board_from_matrix_valid_2x2_board() {
-        match BaseLifeBoard::from_bool_matrix([[false, true], [true, true]]) {
+        match BaseLifeBoard::from_bool_matrix([[false, true], [true, true]], Cell::from_bool) {
             Ok(_) => (),
             Err(error) => {
                 panic!("Board should be invalid. Found {error:#?}");
@@ -396,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_equivalence_life_board_is_cell_alive_false() {
-        let board = BaseLifeBoard::from_bool_matrix([[false]]).unwrap();
+        let board = BaseLifeBoard::from_bool_matrix([[false]], Cell::from_bool).unwrap();
         match board.is_cell_alive(0, 0) {
             Some(alive) => assert!(!alive, "The cell should be dead."),
             None => panic!("Cell should be valid"),
@@ -405,7 +416,7 @@ mod tests {
 
     #[test]
     fn test_equivalence_life_board_is_cell_alive_true() {
-        let board = BaseLifeBoard::from_bool_matrix([[true]]).unwrap();
+        let board = BaseLifeBoard::from_bool_matrix([[true]], Cell::from_bool).unwrap();
         match board.is_cell_alive(0, 0) {
             Some(alive) => assert!(alive, "The cell should be alive."),
             None => panic!("Cell should be valid"),
@@ -414,7 +425,7 @@ mod tests {
 
     #[test]
     fn test_exception_life_board_is_cell_alive_invalid_y() {
-        let board = BaseLifeBoard::from_bool_matrix([[true]]).unwrap();
+        let board = BaseLifeBoard::from_bool_matrix([[true]], Cell::from_bool).unwrap();
         if let Some(_) = board.is_cell_alive(0, 1) {
             panic!("Cell should be invalid")
         }
@@ -422,7 +433,7 @@ mod tests {
 
     #[test]
     fn test_exception_life_board_is_cell_alive_invalid_x() {
-        let board = BaseLifeBoard::from_bool_matrix([[true]]).unwrap();
+        let board = BaseLifeBoard::from_bool_matrix([[true]], Cell::from_bool).unwrap();
         if let Some(_) = board._is_cell_alive(-1, 0) {
             panic!("Cell should be invalid")
         }
@@ -430,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_boundary_get_num_alive_neighbors_1x1_board() {
-        let board = BaseLifeBoard::from_bool_matrix([[true]]).unwrap();
+        let board = BaseLifeBoard::from_bool_matrix([[true]], Cell::from_bool).unwrap();
         match board.num_alive_neighbors_at(0, 0) {
             0 => return,
             num => panic!("There should be no alive neighbors but found {num}."),
@@ -473,7 +484,7 @@ mod tests {
         assert!(!board.next_cell_state_at(2, 2).unwrap().alive, "Cell should remain dead");
     }
 
-    fn assert_boards_eq(expected: BaseLifeBoard, actual: BaseLifeBoard) {
+    fn assert_boards_eq(expected: BaseLifeBoard<Cell>, actual: BaseLifeBoard<Cell>) {
         assert_eq!(expected, actual, "\nEXPECTED:\n{expected}\n ACTUAL:\n{actual}\n")
     }
 
@@ -485,7 +496,7 @@ mod tests {
         assert_boards_eq(expected_board, actual_board);
     }
 
-    fn get_3x3_end_board() -> BaseLifeBoard {
+    fn get_3x3_end_board() -> BaseLifeBoard<Cell> {
         get_3x3_board([
             [true, true, true],
             [false, false, true],
@@ -493,7 +504,7 @@ mod tests {
         ])
     }
 
-    fn get_3x3_start_board() -> BaseLifeBoard {
+    fn get_3x3_start_board() -> BaseLifeBoard<Cell> {
         get_3x3_board([
             [true, true, true],
             [false, true, false],
@@ -509,7 +520,7 @@ mod tests {
             [true, true, false, false, true],
             [false, true, true, false, false],
             [true, false, false, true, false],
-        ]).unwrap();
+        ], Cell::from_bool).unwrap();
         actual_board.simulate_n_steps(10);
         let expected_board = BaseLifeBoard::from_bool_matrix([
             [false, false, false, false, false],
@@ -517,11 +528,11 @@ mod tests {
             [false, false, false, false, false],
             [false, false, false, false, false],
             [false, false, false, false, false],
-        ]).unwrap();
+        ], Cell::from_bool).unwrap();
         assert_boards_eq(expected_board, actual_board);
     }
 
-    fn get_7x7_start_board_0th_gen() -> BaseLifeBoard {
+    fn get_7x7_start_board_0th_gen() -> BaseLifeBoard<Cell> {
         BaseLifeBoard::from_bool_matrix([
             [false, true, false, true, false, false, false],
             [false, true, false, false, true, false, false],
@@ -530,10 +541,10 @@ mod tests {
             [true, false, false, false, true, true, false],
             [true, false, true, false, false, false, false],
             [false, false, true, true, true, false, true],
-        ]).unwrap()
+        ], Cell::from_bool).unwrap()
     }
 
-    fn get_7x7_board_1st_gen() -> BaseLifeBoard {
+    fn get_7x7_board_1st_gen() -> BaseLifeBoard<Cell> {
         BaseLifeBoard::from_bool_matrix([
             [false, false, true, false, false, false, false],
             [false, false, true, false, true, false, false],
@@ -542,10 +553,10 @@ mod tests {
             [false, true, false, false, true, true, false],
             [false, false, true, false, false, false, false],
             [false, true, true, true, false, false, false],
-        ]).unwrap()
+        ], Cell::from_bool).unwrap()
     }
 
-    fn get_7x7_end_board_10th_gen() -> BaseLifeBoard {
+    fn get_7x7_end_board_10th_gen() -> BaseLifeBoard<Cell> {
         BaseLifeBoard::from_bool_matrix([
             [false, false, true, true, false, false, false],
             [false, false, true, true, false, false, false],
@@ -554,7 +565,7 @@ mod tests {
             [false, false, true, false, false, true, true],
             [false, false, false, false, true, false, true],
             [false, false, false, false, false, true, false],
-        ]).unwrap()
+        ], Cell::from_bool).unwrap()
     }
 
     #[test]

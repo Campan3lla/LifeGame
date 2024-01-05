@@ -5,7 +5,7 @@ The provided implementation comes in a serial (`BaseLifeBoard`) and multi-thread
 
 ## Examples:
 ```{rust}
-use crate::life_implementation::{BaseLifeBoard, ParallelLifeBoard};
+use crate::life_implementation::{BaseLifeBoard, ParallelLifeBoard, Cell};
 use crate::life_interface::LifeBoard;
 
 const WIDTH: usize = 10;
@@ -14,7 +14,7 @@ const N_THREADS: u8 = 2;
 
 fn main() {
     let mut game = ParallelLifeBoard::from_board(
-        BaseLifeBoard::gen(WIDTH, HEIGHT),
+        BaseLifeBoard::gen(WIDTH, HEIGHT, Cell::gen),
         N_THREADS
     );
     println!("{game}");

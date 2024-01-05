@@ -8,7 +8,7 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
-use crate::life_implementation::{BaseLifeBoard, ParallelLifeBoard};
+use crate::life_implementation::{BaseLifeBoard, Cell, ParallelLifeBoard};
 use crate::life_interface::LifeBoard;
 
 const SCALE: u32 = 4;
@@ -37,8 +37,12 @@ fn main() {
         Pixels::new(WIDTH / SCALE, HEIGHT / SCALE, surface_texture).expect("Unable to create pixel buffer")
     };
 
-    let mut game = ParallelLifeBoard::from_board(
-        BaseLifeBoard::gen((WIDTH / SCALE) as usize, (HEIGHT / SCALE) as usize),
+    let mut game = ParallelLifeBoard::<Cell>::from_board(
+        BaseLifeBoard::gen(
+            (WIDTH / SCALE) as usize,
+            (HEIGHT / SCALE) as usize,
+            Cell::gen
+        ),
         N_THREADS
     );
 

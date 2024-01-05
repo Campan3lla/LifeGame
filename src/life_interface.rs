@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug};
 
-pub trait LifeBoard<T: LifeCell>: PartialEq + Clone {
+pub trait LifeBoard<T: LifeCell<T>>: PartialEq + Clone {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn simulate(&mut self);
@@ -13,8 +13,10 @@ pub trait LifeBoard<T: LifeCell>: PartialEq + Clone {
 }
 
 
-pub trait LifeCell: PartialEq + Clone {
+pub trait LifeCell<T: LifeCell<T>>: PartialEq + Clone {
     fn is_alive(&self) -> bool;
+    fn to_alive(&self) -> T;
+    fn to_dead(&self) -> T;
 }
 
 #[derive(Debug)]
