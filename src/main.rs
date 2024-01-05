@@ -32,7 +32,7 @@ fn main() {
     let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(dbg!(WIDTH / SCALE), dbg!(HEIGHT / SCALE), surface_texture).expect("Unable to create pixel buffer")
+        Pixels::new(WIDTH / SCALE, HEIGHT / SCALE, surface_texture).expect("Unable to create pixel buffer")
     };
 
     let mut game = ParallelLifeBoard::from(
@@ -60,7 +60,6 @@ fn main() {
         } else if let Event::MainEventsCleared = event {
             let now = Instant::now();
             let elapsed = now - last_frame_time;
-            println!("{auto_step}");
             if elapsed >= Duration::from_millis(TIME_STEP) && auto_step {
                 last_frame_time = now;
                 game.simulate();
