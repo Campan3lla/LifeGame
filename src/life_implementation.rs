@@ -329,7 +329,7 @@ pub struct ParallelLifeBoard {
 
 #[cfg(test)]
 mod tests {
-    use crate::life_imp::{BaseLifeBoard, Cell, ParallelLifeBoard};
+    use crate::life_implementation::{BaseLifeBoard, Cell, ParallelLifeBoard};
     use crate::life_interface::{LifeBoard, LifeBoardError};
 
     fn assert_contains(actual: String, expected: &str) {
