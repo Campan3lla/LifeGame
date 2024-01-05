@@ -176,26 +176,26 @@ pub struct LifeBoard {
 
 pub struct ParallelLifeBoard {
     board: Arc<LifeBoard>,
-    nthreads: u8,
+    nthreads: usize,
     thread_row_ranges: Vec<Range<usize>>,
 } impl ParallelLifeBoard {
     pub fn gen(width: usize, height: usize, nthreads: u8) -> ParallelLifeBoard {
         ParallelLifeBoard {
             board: Arc::new(LifeBoard::gen(width, height)),
-            nthreads,
-            thread_row_ranges: dbg!(ParallelLifeBoard::row_ranges(width, nthreads))
+            nthreads: nthreads as usize,
+            thread_row_ranges: dbg!(ParallelLifeBoard::row_ranges(width, nthreads as usize))
         }
     }
 
     pub fn from(board: LifeBoard, nthreads: u8) -> ParallelLifeBoard {
         ParallelLifeBoard {
-            thread_row_ranges: dbg!(ParallelLifeBoard::row_ranges(board.width, nthreads)),
+            thread_row_ranges: dbg!(ParallelLifeBoard::row_ranges(board.width, nthreads as usize)),
             board: Arc::new(board),
-            nthreads,
+            nthreads: (nthreads as usize),
         }
     }
-    fn row_ranges(width: usize, nthreads: u8) -> Vec<Range<usize>> {
-        let slice_size = width / (nthreads as usize);
+    fn row_ranges(width: usize, nthreads: usize) -> Vec<Range<usize>> {
+        let slice_size = width / nthreads;
         let mut cur_left_col = 0;
         (1..=nthreads).map(|thread_idx| {
             if thread_idx == nthreads {
@@ -209,7 +209,7 @@ pub struct ParallelLifeBoard {
     }
 
     pub fn simulate(&mut self) {
-        let (tx, rx) = mpsc::channel();
+
     }
 } impl Debug for ParallelLifeBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
