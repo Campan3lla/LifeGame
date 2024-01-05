@@ -2,7 +2,7 @@ use std::cmp::min;
 use rand::Rng;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::ops::Range;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::thread;
 
 #[derive(Debug, Clone)]
@@ -28,6 +28,7 @@ pub enum LifeError {
     InvalidBoard(String),
 }
 
+#[derive(Clone)]
 pub struct LifeBoard {
     grid: Vec<Vec<LifeCell>>,
     width: usize,
@@ -170,6 +171,57 @@ pub struct LifeBoard {
             all_eq &= expected_row.eq(actual_row);
         }
         all_eq
+    }
+}
+
+pub struct ParallelLifeBoard {
+    board: Arc<LifeBoard>,
+    nthreads: u8,
+    thread_row_ranges: Vec<Range<usize>>,
+} impl ParallelLifeBoard {
+    pub fn gen(width: usize, height: usize, nthreads: u8) -> ParallelLifeBoard {
+        ParallelLifeBoard {
+            board: Arc::new(LifeBoard::gen(width, height)),
+            nthreads,
+            thread_row_ranges: dbg!(ParallelLifeBoard::row_ranges(width, nthreads))
+        }
+    }
+
+    pub fn from(board: LifeBoard, nthreads: u8) -> ParallelLifeBoard {
+        ParallelLifeBoard {
+            thread_row_ranges: dbg!(ParallelLifeBoard::row_ranges(board.width, nthreads)),
+            board: Arc::new(board),
+            nthreads,
+        }
+    }
+    fn row_ranges(width: usize, nthreads: u8) -> Vec<Range<usize>> {
+        let slice_size = width / (nthreads as usize);
+        let mut cur_left_col = 0;
+        (1..=nthreads).map(|thread_idx| {
+            if thread_idx == nthreads {
+                cur_left_col..width-1
+            } else {
+                let range = cur_left_col..cur_left_col + slice_size;
+                cur_left_col += slice_size;
+                range
+            }
+        }).collect()
+    }
+
+    pub fn simulate(&mut self) {
+        let (tx, rx) = mpsc::channel();
+    }
+} impl Debug for ParallelLifeBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+         Debug::fmt(&self.board, f)
+    }
+} impl Display for ParallelLifeBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.board, f)
+    }
+} impl PartialEq for ParallelLifeBoard {
+    fn eq(&self, other: &Self) -> bool {
+        PartialEq::eq(&self.board, &other.board)
     }
 }
 

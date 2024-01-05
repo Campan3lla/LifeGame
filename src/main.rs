@@ -6,7 +6,7 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
-use crate::life::LifeBoard;
+use crate::life::{LifeBoard, ParallelLifeBoard};
 
 const SCALE: u32 = 16;
 const WIDTH: u32 = 320;
@@ -39,7 +39,7 @@ fn main() {
             for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
                 let x = (i % (WIDTH as usize)) as i64;
                 let y = (i / (WIDTH as usize)) as i64;
-                if let Some(bool) = dbg!(game.is_cell_alive(x, y)) {
+                if let Some(bool) = game.is_cell_alive(x, y) {
                     if bool {
                         pixel.copy_from_slice(&[0xff, 0, 0, 0xff]);
                     } else {
@@ -59,7 +59,7 @@ fn main() {
                 window.request_redraw();
                 return;
             } else if input.key_pressed(VirtualKeyCode::D) {
-                // game.simulate_parallel(5);
+                ParallelLifeBoard::from(game.clone(), 5);
                 return;
             }
         }
