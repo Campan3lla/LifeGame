@@ -8,9 +8,10 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 use crate::life::{LifeBoard, ParallelLifeBoard};
 
-const SCALE: u32 = 16;
-const WIDTH: u32 = 320;
-const HEIGHT: u32 = 256;
+const SCALE: u32 = 64;  // 16
+const WIDTH: u32 = 448;
+const HEIGHT: u32 = 448; // 256
+// scales to = (5, 4)
 
 fn main() {
     let event_loop = EventLoop::new();
@@ -28,18 +29,29 @@ fn main() {
     let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WIDTH / SCALE, HEIGHT / SCALE, surface_texture).expect("Unable to create pixel buffer")
+        Pixels::new(dbg!(WIDTH / SCALE), dbg!(HEIGHT / SCALE), surface_texture).expect("Unable to create pixel buffer")
     };
 
-    let game = LifeBoard::gen(WIDTH as usize, HEIGHT as usize);
-    let mut game = ParallelLifeBoard::from(game, 5);
+    // let game = LifeBoard::gen(dbg!(WIDTH / SCALE) as usize, dbg!(HEIGHT / SCALE) as usize);
+    let mut game = ParallelLifeBoard::from_grid(
+        [
+            [true, false, true, false, false, true, false],
+            [false, true, true, false, false, true, true],
+            [false, false, false, true, false, false, true],
+            [true, true, false, false, false, true, false],
+            [false, false, false, false, true, false, false],
+            [false, true, true, false, true, false, true],
+            [false, true, false, true, true, false, true],
+        ], 3).unwrap();
+    println!("{game:?}\n");
 
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
-            let mut frame = pixels.frame_mut();
+            let frame = pixels.frame_mut();
             for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-                let x = (i % (WIDTH as usize)) as i64;
-                let y = (i / (WIDTH as usize)) as i64;
+                let x = (i % (WIDTH / SCALE) as usize) as i64;
+                let y = (i / (WIDTH / SCALE) as usize) as i64;
+                // println!("({x}, {y})");
                 if let Some(bool) = game.is_cell_alive(x, y) {
                     if bool {
                         pixel.copy_from_slice(&[0xff, 0, 0, 0xff]);
@@ -48,6 +60,7 @@ fn main() {
                     }
                 }
             }
+            println!("{game:?}\n");
             pixels.render().expect("Unable to render pixel buffer.");
         }
 
@@ -60,7 +73,6 @@ fn main() {
                 window.request_redraw();
                 return;
             } else if input.key_pressed(VirtualKeyCode::D) {
-                ;
                 return;
             }
         }

@@ -1,4 +1,3 @@
-use std::cmp::min;
 use rand::Rng;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::ops::Range;
@@ -143,26 +142,30 @@ pub struct LifeBoard {
     pub fn height(&self) -> usize { self.height }
     pub fn cell_at(&self, x: usize, y: usize) -> &LifeCell { &self.grid[x][y] }
 
-    pub fn grid_fmt(&self, f: &mut Formatter<'_>, alive_cell: &str, dead_cell: &str) -> fmt::Result {
-        for row_idx in 0..self.width() {
-            for col_idx in 0..self.height() {
+    pub fn grid_fmt(&self, f: &mut Formatter<'_>, alive_cell: &str, dead_cell: &str, dbg: bool) -> fmt::Result {
+        for col_idx in 0..self.height() {
+            for row_idx in 0..self.width() {
                 let cell = self.cell_at(row_idx, col_idx);
                 let alive = if cell.alive { alive_cell } else { dead_cell };
-                let cell_string = format!("{} ", alive);
+                let cell_string = if dbg {
+                    format!("(alv={alive}, {row_idx}, {col_idx}) ")
+                } else {
+                    format!("{} ", alive)
+                };
                 write!(f, "{}", cell_string)?;
             }
-            let newline = if row_idx == self.width-1 { "" } else { "\n" };
+            let newline = if col_idx == self.width-1 { "" } else { "\n" };
             write!(f, "{}", newline)?;
         }
         write!(f, "{}", "")
     }
 } impl Display for LifeBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.grid_fmt(f, "*", " ")
+        self.grid_fmt(f, "*", " ", false)
     }
 } impl Debug for LifeBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.grid_fmt(f, "T", "F")
+        self.grid_fmt(f, "T", "F", true)
     }
 } impl PartialEq for LifeBoard {
     fn eq(&self, other: &Self) -> bool {
@@ -194,12 +197,29 @@ pub struct ParallelLifeBoard {
             nthreads: (nthreads as usize),
         }
     }
+    pub fn from_grid<A, B>(collection: A, nthreads: u8) -> Result<ParallelLifeBoard, LifeError>
+        where
+            A: IntoIterator<Item=B>,
+            B: IntoIterator<Item=bool>
+    {
+        let grid = collection.into_iter().map(|row| {
+            row.into_iter().map(|alive| {
+                LifeCell { alive }
+            }).collect()
+        }).collect();
+        let board = LifeBoard::new(grid)?;
+        Ok(ParallelLifeBoard {
+            thread_row_ranges: ParallelLifeBoard::row_ranges(board.width, nthreads as usize),
+            nthreads: nthreads as usize,
+            board: Arc::new(board),
+        })
+    }
     fn row_ranges(width: usize, nthreads: usize) -> Vec<Range<usize>> {
         let slice_size = width / nthreads;
         let mut cur_left_col = 0;
         (1..=nthreads).map(|thread_idx| {
             if thread_idx == nthreads {
-                cur_left_col..width-1
+                cur_left_col..width
             } else {
                 let range = cur_left_col..cur_left_col + slice_size;
                 cur_left_col += slice_size;
@@ -216,7 +236,8 @@ pub struct ParallelLifeBoard {
             let board = self.board.clone();
             let tx = tx.clone();
             let thread_handle = thread::spawn(move || {
-                let mut board_slice: Vec<Vec<LifeCell>> = Vec::with_capacity(row_range.end);
+                println!("Thread Started");
+                let mut board_slice: Vec<Vec<LifeCell>> = Vec::with_capacity(dbg!(row_range.end));
                 for row_idx in row_range {
                     let mut col = Vec::with_capacity(board.height);
                     for col_idx in 0..board.height {
@@ -224,19 +245,32 @@ pub struct ParallelLifeBoard {
                     }
                     board_slice.push(col);
                 }
-                tx.send((board_slice, thread_idx))
+                tx.send((board_slice, thread_idx)).unwrap();
             });
             thread_handles.push(thread_handle);
         }
         let mut new_gird: Vec<Vec<LifeCell>> = (0..self.board.width).map(|_| Vec::new()).collect();
         for handle in thread_handles {
-            let _ = handle.join().unwrap();
+            let _ = handle.join().expect("Threads should join correctly.");
         }
-        for (board_slice, thread_idx) in rx.iter() {
+        for _ in 0..self.nthreads {
+            let (board_slice, thread_idx) = rx.recv().expect("Should receive values correctly.");
             let row_range = self.thread_row_ranges[thread_idx].clone();
             for (board_col, row_idx) in board_slice.into_iter().zip(row_range) {
                 new_gird[row_idx] = board_col;
             }
+        }
+        self.board = Arc::new(
+            LifeBoard {
+                grid: new_gird,
+                width: self.board.width,
+                height: self.board.height
+            });
+    }
+
+    pub fn simulate_n_steps(&mut self, steps: u16) {
+        for _ in 0..steps {
+            self.simulate()
         }
     }
 
@@ -259,7 +293,7 @@ pub struct ParallelLifeBoard {
 
 #[cfg(test)]
 mod tests {
-    use crate::life::{LifeBoard, LifeCell, LifeError};
+    use crate::life::{LifeBoard, LifeCell, LifeError, ParallelLifeBoard};
 
     fn assert_contains(actual: String, expected: &str) {
         assert!(
@@ -418,18 +452,26 @@ mod tests {
 
     #[test]
     fn test_equivalence_simulate_3x3_board() {
-        let mut actual_board = get_3x3_board([
-            [true, true, true],
-            [false, true, false],
-            [true, false, false]
-        ]);
-        let expected_board = get_3x3_board([
+        let mut actual_board = get_3x3_start_board();
+        let expected_board = get_3x3_end_board();
+        actual_board = actual_board.simulate();
+        assert_boards_eq(expected_board, actual_board);
+    }
+
+    fn get_3x3_end_board() -> LifeBoard {
+        get_3x3_board([
             [true, true, true],
             [false, false, true],
             [false, false, false]
-        ]);
-        actual_board = actual_board.simulate();
-        assert_boards_eq(expected_board, actual_board);
+        ])
+    }
+
+    fn get_3x3_start_board() -> LifeBoard {
+        get_3x3_board([
+            [true, true, true],
+            [false, true, false],
+            [true, false, false]
+        ])
     }
 
     #[test]
@@ -452,9 +494,8 @@ mod tests {
         assert_boards_eq(expected_board, actual_board);
     }
 
-    #[test]
-    fn test_equivalence_simulate_7x7_board_10_steps() {
-        let mut actual_board = LifeBoard::new(to_grid([
+    fn get_7x7_start_board() -> LifeBoard {
+        LifeBoard::new(to_grid([
             [true, false, true, false, false, true, false],
             [false, true, true, false, false, true, true],
             [false, false, false, true, false, false, true],
@@ -462,9 +503,11 @@ mod tests {
             [false, false, false, false, true, false, false],
             [false, true, true, false, true, false, true],
             [false, true, false, true, true, false, true],
-        ])).unwrap();
-        actual_board = actual_board.simulate_n_steps(10);
-        let expected_board = LifeBoard::new(to_grid([
+        ])).unwrap()
+    }
+
+    fn get_7x7_end_board() -> LifeBoard {
+        LifeBoard::new(to_grid([
             [false, false, true, false, true, false, false],
             [false, true, false, false, true, false, false],
             [false, true, true, false, true, false, false],
@@ -472,7 +515,36 @@ mod tests {
             [false, true, false, true, true, true, false],
             [false, true, true, false, true, false, false],
             [false, false, true, false, false, false, false],
-        ])).unwrap();
+        ])).unwrap()
+    }
+
+    #[test]
+    fn test_equivalence_simulate_7x7_board_10_steps() {
+        let mut actual_board = get_7x7_start_board();
+        actual_board = actual_board.simulate_n_steps(10);
+        let expected_board = get_7x7_end_board();
         assert_boards_eq(expected_board, actual_board);
+    }
+
+    #[test]
+    fn test_equivalence_parallel_3_threads_simulate_7x7_board_10_steps() {
+        let actual_board = get_7x7_start_board();
+        let mut actual_board = ParallelLifeBoard::from(actual_board, 3);
+        actual_board.simulate_n_steps(10);
+        let expected_board = get_7x7_end_board();
+        let expected_board = ParallelLifeBoard::from(expected_board, 3);
+        assert_eq!(expected_board, actual_board);
+    }
+
+    #[test]
+    fn test_equivalence_parallel_9_threads_simulate_7x7_board_10_steps() {
+        let actual_board = get_7x7_start_board();
+        let mut actual_board = ParallelLifeBoard::from(actual_board, 9);
+        actual_board.simulate_n_steps(10);
+        let expected_board = get_7x7_end_board();
+        let expected_board = ParallelLifeBoard::from(expected_board, 9);
+        assert_eq!(expected_board, actual_board);
+        println!("{expected_board:?}\n");
+        println!("{actual_board:?}");
     }
 }
