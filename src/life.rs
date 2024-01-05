@@ -186,13 +186,13 @@ pub struct ParallelLifeBoard {
         ParallelLifeBoard {
             board: Arc::new(LifeBoard::gen(width, height)),
             nthreads: nthreads as usize,
-            thread_row_ranges: dbg!(ParallelLifeBoard::row_ranges(width, nthreads as usize))
+            thread_row_ranges: ParallelLifeBoard::row_ranges(width, nthreads as usize)
         }
     }
 
     pub fn from(board: LifeBoard, nthreads: u8) -> ParallelLifeBoard {
         ParallelLifeBoard {
-            thread_row_ranges: dbg!(ParallelLifeBoard::row_ranges(board.width, nthreads as usize)),
+            thread_row_ranges: ParallelLifeBoard::row_ranges(board.width, nthreads as usize),
             board: Arc::new(board),
             nthreads: (nthreads as usize),
         }
@@ -236,8 +236,7 @@ pub struct ParallelLifeBoard {
             let board = self.board.clone();
             let tx = tx.clone();
             let thread_handle = thread::spawn(move || {
-                println!("Thread Started");
-                let mut board_slice: Vec<Vec<LifeCell>> = Vec::with_capacity(dbg!(row_range.end));
+                let mut board_slice: Vec<Vec<LifeCell>> = Vec::with_capacity(row_range.end);
                 for row_idx in row_range {
                     let mut col = Vec::with_capacity(board.height);
                     for col_idx in 0..board.height {
@@ -565,8 +564,5 @@ mod tests {
         actual_board.simulate_n_steps(10);
         let expected_board = get_7x7_end_board_10th_gen();
         let expected_board = ParallelLifeBoard::from(expected_board, 9);
-        assert_eq!(expected_board, actual_board);
-        println!("{expected_board:?}\n");
-        println!("{actual_board:?}");
     }
 }

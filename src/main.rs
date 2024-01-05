@@ -8,10 +8,10 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 use crate::life::{LifeBoard, ParallelLifeBoard};
 
-const SCALE: u32 = 64;  // 16
-const WIDTH: u32 = 448;
-const HEIGHT: u32 = 448; // 256
-// scales to = (5, 4)
+const SCALE: u32 = 2;  // 16
+const WIDTH: u32 = 1920;
+const HEIGHT: u32 = 1080;
+const N_THREADS: u8 = 5;
 
 fn main() {
     let event_loop = EventLoop::new();
@@ -32,18 +32,10 @@ fn main() {
         Pixels::new(dbg!(WIDTH / SCALE), dbg!(HEIGHT / SCALE), surface_texture).expect("Unable to create pixel buffer")
     };
 
-    // let game = LifeBoard::gen(dbg!(WIDTH / SCALE) as usize, dbg!(HEIGHT / SCALE) as usize);
-    let mut game = ParallelLifeBoard::from_grid(
-        [
-            [true, false, true, false, false, true, false],
-            [false, true, true, false, false, true, true],
-            [false, false, false, true, false, false, true],
-            [true, true, false, false, false, true, false],
-            [false, false, false, false, true, false, false],
-            [false, true, true, false, true, false, true],
-            [false, true, false, true, true, false, true],
-        ], 3).unwrap();
-    println!("{game:?}\n");
+    let mut game = ParallelLifeBoard::from(
+        LifeBoard::gen((WIDTH / SCALE) as usize, (HEIGHT / SCALE) as usize),
+        N_THREADS
+    );
 
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
@@ -51,7 +43,6 @@ fn main() {
             for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
                 let x = (i % (WIDTH / SCALE) as usize) as i64;
                 let y = (i / (WIDTH / SCALE) as usize) as i64;
-                // println!("({x}, {y})");
                 if let Some(bool) = game.is_cell_alive(x, y) {
                     if bool {
                         pixel.copy_from_slice(&[0xff, 0, 0, 0xff]);
@@ -60,7 +51,6 @@ fn main() {
                     }
                 }
             }
-            println!("{game:?}\n");
             pixels.render().expect("Unable to render pixel buffer.");
         }
 
