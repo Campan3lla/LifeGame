@@ -1,5 +1,6 @@
 mod life;
 
+use std::time::{Duration, Instant};
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
@@ -8,14 +9,16 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 use crate::life::{LifeBoard, ParallelLifeBoard};
 
-const SCALE: u32 = 2;  // 16
+const SCALE: u32 = 4;  // 16
 const WIDTH: u32 = 1920;
 const HEIGHT: u32 = 1080;
 const N_THREADS: u8 = 5;
+const TIME_STEP: u64 = 250;
 
 fn main() {
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
+    let mut auto_step: bool = false;
     let window = {
         let size = LogicalSize::new(WIDTH, HEIGHT);
         WindowBuilder::new()
@@ -37,6 +40,8 @@ fn main() {
         N_THREADS
     );
 
+    let mut last_frame_time = Instant::now();
+
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
             let frame = pixels.frame_mut();
@@ -52,6 +57,15 @@ fn main() {
                 }
             }
             pixels.render().expect("Unable to render pixel buffer.");
+        } else if let Event::MainEventsCleared = event {
+            let now = Instant::now();
+            let elapsed = now - last_frame_time;
+            println!("{auto_step}");
+            if elapsed >= Duration::from_millis(TIME_STEP) && auto_step {
+                last_frame_time = now;
+                game.simulate();
+                window.request_redraw();
+            }
         }
 
         if input.update(&event) {
@@ -62,7 +76,8 @@ fn main() {
                 game.simulate();
                 window.request_redraw();
                 return;
-            } else if input.key_pressed(VirtualKeyCode::D) {
+            } else if input.key_pressed(VirtualKeyCode::P) {
+                auto_step = if auto_step { false } else { true };
                 return;
             }
         }
