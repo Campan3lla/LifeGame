@@ -31,7 +31,8 @@ fn main() {
         Pixels::new(WIDTH / SCALE, HEIGHT / SCALE, surface_texture).expect("Unable to create pixel buffer")
     };
 
-    let mut game = LifeBoard::gen(WIDTH as usize, HEIGHT as usize);
+    let game = LifeBoard::gen(WIDTH as usize, HEIGHT as usize);
+    let mut game = ParallelLifeBoard::from(game, 5);
 
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
@@ -55,11 +56,11 @@ fn main() {
                 *control_flow = ControlFlow::ExitWithCode(0);
                 return;
             } else if input.key_pressed(VirtualKeyCode::Space) {
-                game = game.simulate();
+                game.simulate();
                 window.request_redraw();
                 return;
             } else if input.key_pressed(VirtualKeyCode::D) {
-                ParallelLifeBoard::from(game.clone(), 5);
+                ;
                 return;
             }
         }

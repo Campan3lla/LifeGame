@@ -209,7 +209,39 @@ pub struct ParallelLifeBoard {
     }
 
     pub fn simulate(&mut self) {
+        let (tx, rx) = mpsc::channel::<(Vec<Vec<LifeCell>>, usize)>();
+        let mut thread_handles = Vec::with_capacity(self.nthreads);
+        for thread_idx in 0..self.nthreads {
+            let row_range = self.thread_row_ranges[thread_idx].clone();
+            let board = self.board.clone();
+            let tx = tx.clone();
+            let thread_handle = thread::spawn(move || {
+                let mut board_slice: Vec<Vec<LifeCell>> = Vec::with_capacity(row_range.end);
+                for row_idx in row_range {
+                    let mut col = Vec::with_capacity(board.height);
+                    for col_idx in 0..board.height {
+                        col.push(board.next_cell_state(col_idx, row_idx))
+                    }
+                    board_slice.push(col);
+                }
+                tx.send((board_slice, thread_idx))
+            });
+            thread_handles.push(thread_handle);
+        }
+        let mut new_gird: Vec<Vec<LifeCell>> = (0..self.board.width).map(|_| Vec::new()).collect();
+        for handle in thread_handles {
+            let _ = handle.join().unwrap();
+        }
+        for (board_slice, thread_idx) in rx.iter() {
+            let row_range = self.thread_row_ranges[thread_idx].clone();
+            for (board_col, row_idx) in board_slice.into_iter().zip(row_range) {
+                new_gird[row_idx] = board_col;
+            }
+        }
+    }
 
+    pub fn is_cell_alive(&self, x: i64, y: i64) -> Option<bool> {
+        self.board.is_cell_alive(x, y)
     }
 } impl Debug for ParallelLifeBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
