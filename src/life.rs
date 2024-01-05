@@ -241,7 +241,7 @@ pub struct ParallelLifeBoard {
                 for row_idx in row_range {
                     let mut col = Vec::with_capacity(board.height);
                     for col_idx in 0..board.height {
-                        col.push(board.next_cell_state(col_idx, row_idx))
+                        col.push(board.next_cell_state(row_idx, col_idx))
                     }
                     board_slice.push(col);
                 }
