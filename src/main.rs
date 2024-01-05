@@ -1,5 +1,5 @@
-mod life;
 mod life_interface;
+mod life_imp;
 
 use std::time::{Duration, Instant};
 use pixels::{Pixels, SurfaceTexture};
@@ -8,10 +8,11 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
-use crate::life::{LifeBoard, ParallelLifeBoard};
+use crate::life_imp::{BaseLifeBoard, ParallelLifeBoard};
+use crate::life_interface::LifeBoard;
 
-const SCALE: u32 = 4;  // 16
-const WIDTH: u32 = 1920;
+const SCALE: u32 = 4;
+const WIDTH: u32 = 1920;  // (1920, 1080, 4), (448, 320, 64)
 const HEIGHT: u32 = 1080;
 const N_THREADS: u8 = 5;
 const TIME_STEP: u64 = 250;
@@ -36,8 +37,8 @@ fn main() {
         Pixels::new(WIDTH / SCALE, HEIGHT / SCALE, surface_texture).expect("Unable to create pixel buffer")
     };
 
-    let mut game = ParallelLifeBoard::from(
-        LifeBoard::gen((WIDTH / SCALE) as usize, (HEIGHT / SCALE) as usize),
+    let mut game = ParallelLifeBoard::from_board(
+        BaseLifeBoard::gen((WIDTH / SCALE) as usize, (HEIGHT / SCALE) as usize),
         N_THREADS
     );
 
@@ -47,8 +48,8 @@ fn main() {
         if let Event::RedrawRequested(_) = event {
             let frame = pixels.frame_mut();
             for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-                let x = (i % (WIDTH / SCALE) as usize) as i64;
-                let y = (i / (WIDTH / SCALE) as usize) as i64;
+                let x = i % (WIDTH / SCALE) as usize;
+                let y = i / (WIDTH / SCALE) as usize;
                 if let Some(bool) = game.is_cell_alive(x, y) {
                     if bool {
                         pixel.copy_from_slice(&[0xff, 0, 0, 0xff]);
