@@ -7,6 +7,7 @@ The provided implementation comes in a serial (`BaseLifeBoard`) and multi-thread
 
 
 ## Examples:
+### Print Board:
 ```{rust}
 use life::{ParallelLifeBoard, BaseLifeBoard, Cell, LifeBoard};
 
@@ -24,6 +25,13 @@ fn main() {
     println!("{game}");
 }
 ```
+
+### Simulate & View Game Board:
+Run the [main](./src/bin/main.rs) function to start a life board simulation.
+Several constants have been defined at the top of the program for customization.
+* Controls:
+  * _Space_: Advance to next generation
+  * _P_: Pause/Unpause simulation (auto-steps after `MS_TIME_STEP` milliseconds)
 
 ## Contributors:
 * Jonah Kim

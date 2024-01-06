@@ -9,13 +9,12 @@ use winit_input_helper::WinitInputHelper;
 use life::{BaseLifeBoard, ParallelLifeBoard, LifeBoard, LifeCell};
 
 const SCALE: u32 = 4;  // How many logical pixels correspond to one `LifeCell`
-const WIDTH: u32 = 1920;
-const HEIGHT: u32 = 1080;
-const N_THREADS: u8 = 5;
-const MS_TIME_STEP: u64 = 250;
-
-const DEAD_COLOR: Color = Color(0, 0, 0, 0xff);
-const ALIVE_COLOR: Color = Color(0x30, 0xff, 0xff, 0xff);
+const WIDTH: u32 = 1920;  // Width of the window
+const HEIGHT: u32 = 1080;  // Height of the window
+const N_THREADS: u8 = 5;  // Number of threads to use in the ParallelLifeBoard
+const MS_TIME_STEP: u64 = 250;  // Separation between frame redraws when in auto mode
+const DEAD_COLOR: Color = Color(0, 0, 0, 0xff);  // Cell dead color
+const ALIVE_COLOR: Color = Color(0x30, 0xff, 0xff, 0xff);  // Cell alive color
 
 #[derive(PartialEq, Clone, Debug)]
 struct Color(u8, u8, u8, u8);
