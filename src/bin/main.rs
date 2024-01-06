@@ -1,6 +1,3 @@
-mod life_interface;
-mod life_implementation;
-
 use std::time::{Duration, Instant};
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
@@ -8,8 +5,7 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
-use crate::life_implementation::{BaseLifeBoard, Cell, ParallelLifeBoard};
-use crate::life_interface::LifeBoard;
+use life::{BaseLifeBoard, Cell, ParallelLifeBoard, LifeBoard};
 
 const SCALE: u32 = 4;
 const WIDTH: u32 = 1920;  // (1920, 1080, 4), (448, 320, 64)

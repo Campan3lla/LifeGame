@@ -5,8 +5,7 @@ The provided implementation comes in a serial (`BaseLifeBoard`) and multi-thread
 
 ## Examples:
 ```{rust}
-use crate::life_implementation::{BaseLifeBoard, ParallelLifeBoard, Cell};
-use crate::life_interface::LifeBoard;
+use life::{ParallelLifeBoard, BaseLifeBoard, Cell, LifeBoard};
 
 const WIDTH: usize = 10;
 const HEIGHT: usize = 10;
