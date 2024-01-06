@@ -3,7 +3,10 @@
 This crate implements a library and a game implementation of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway's_Game_of_Life) in Rust. 
 The provided implementation comes in a serial (`BaseLifeBoard`) and multi-threaded variant (`ParallelLifeBoard`).
 
-![Demo](./docs/game_of_life_simulation.mov)
+<img src="./docs/game_of_life_simulation.mov" width="200px" alt="game of life">
+<img src="./docs/game_of_life.mp4" width="200px" alt="game of life">
+<img src="./docs/game_of_life_sim.mp4" width="200px" alt="game of life">
+
 
 ## Examples:
 ```{rust}
