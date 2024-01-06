@@ -604,4 +604,9 @@ mod tests {
         let expected_board = get_7x7_end_board_10th_gen();
         let expected_board = ParallelLifeBoard::from_board(expected_board, 9);
     }
+
+    #[test]
+    fn test_ci() {
+        panic!();
+    }
 }
